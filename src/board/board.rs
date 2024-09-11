@@ -25,27 +25,48 @@ pub fn get_legal_moves(board: Board, x: u32, y: u32, color: Color) -> Vec<Move> 
     let piece = board.pieces[y as usize][x as usize];
 
     let moves = match piece.piece_type {
-        PieceType::BISHOP => {
-            bishop_legal_moves(x.try_into().unwrap(), y.try_into().unwrap(), board, color)
-        }
-        PieceType::EMPTY => {
-            empty_legal_moves(x.try_into().unwrap(), y.try_into().unwrap(), board, color)
-        }
-        PieceType::KING => {
-            king_legal_moves(x.try_into().unwrap(), y.try_into().unwrap(), board, color)
-        }
-        PieceType::KNIGHT => {
-            knight_legal_moves(x.try_into().unwrap(), y.try_into().unwrap(), board, color)
-        }
-        PieceType::PAWN => {
-            pawn_legal_moves(x.try_into().unwrap(), y.try_into().unwrap(), board, color)
-        }
-        PieceType::QUEEN => {
-            queen_legal_moves(x.try_into().unwrap(), y.try_into().unwrap(), board, color)
-        }
-        PieceType::ROOK => {
-            rook_legal_moves(x.try_into().unwrap(), y.try_into().unwrap(), board, color)
-        }
+        PieceType::BISHOP => bishop_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::EMPTY => empty_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::KING => king_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::KNIGHT => knight_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::PAWN => pawn_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::QUEEN => queen_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::ROOK => rook_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
     };
     return moves;
 }
@@ -197,11 +218,21 @@ mod tests {
     }
 
     #[test]
-    fn pawn_can_move_from_start() {
+    fn white_pawn_can_move_from_start() {
         let board = init_board();
         let piece_size = board.pieces.len();
         println!("{piece_size}");
         let legal_moves = get_legal_moves(board, 0, 1, Color::WHITE);
+
+        assert_eq!(legal_moves.len(), 2);
+    }
+
+    #[test]
+    fn black_pawn_can_move_from_start() {
+        let board = init_board();
+        let piece_size = board.pieces.len();
+        println!("{piece_size}");
+        let legal_moves = get_legal_moves(board, 0, 6, Color::BLACK);
 
         assert_eq!(legal_moves.len(), 2);
     }
@@ -212,6 +243,16 @@ mod tests {
         let piece_size = board.pieces.len();
         println!("{piece_size}");
         let legal_moves = get_legal_moves(board, 1, 0, Color::WHITE);
+
+        assert_eq!(legal_moves.len(), 2);
+    }
+
+    #[test]
+    fn black_knight_can_move_from_start() {
+        let board = init_board();
+        let piece_size = board.pieces.len();
+        println!("{piece_size}");
+        let legal_moves = get_legal_moves(board, 1, 7, Color::BLACK);
 
         assert_eq!(legal_moves.len(), 2);
     }

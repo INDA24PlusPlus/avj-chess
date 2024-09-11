@@ -13,6 +13,7 @@ pub enum PieceType {
     EMPTY,
 }
 // x, y
+#[derive(Clone)]
 pub struct Move(i32, i32);
 
 #[derive(Clone, Copy, PartialEq)]
@@ -164,39 +165,60 @@ pub fn knight_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Mov
     let a = vec![-2, 2];
     let b = vec![-1, 1];
 
+    // The knight can either move 2 steps horizontally or 2 steps vertically
+    // Case 1: two steps horizontally
+    // Valid transforms: (-2, 1) (-2, -1), (2, -1), (2, 1)
+    // Basically, cartesian product: {2, -2} x {1, -1}
+    // Case 2: two steps vertically
+    // Valid moves (-1, -2), (-1, 2) and so on
+    // Cartesian product: {1, -1} x {2, -2}
+    // Valid moves: {1, -1} x {2, -2} + {-2, 2} x {-1, 1}
     let two_steps_vertical = cartesian_product(&a, &b);
     let two_steps_horizontal = cartesian_product(&b, &a);
     let possible_moves = [two_steps_horizontal, two_steps_vertical].concat();
     for possible_move in possible_moves {
         if possible_move.0 + x >= 0
-            && possible_move.0 + x <= 7
-            && possible_move.1 >= 0
-            && possible_move.1 <= 7
+            && (possible_move.0 + x) <= 7
+            && (possible_move.1 + y) >= 0
+            && (possible_move.1 + y) <= 7
             && board.pieces[(y + possible_move.1) as usize][(x + possible_move.0) as usize].color
                 != color
         {
             valid_moves.push(Move(x + possible_move.0, y + possible_move.1));
         }
     }
-    // Case 1: two steps horizontally
-    // Valid transforms: (-2, 1) (-2, -1), (2, -1), (2, 1)
-    // Basically, cartesian product: {2, -2} x {1, -1}
-    // Case 2: two steps vertically
-    // Cartesian product: {1, -1} x {2, -2}
 
     return valid_moves;
 }
 
+// TODO: Fix naming, little confusing with valid and possible moves
 pub fn king_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Move> {
     let mut valid_moves: Vec<Move> = Vec::new();
 
-    return valid_moves;
+    // Pseudo legal moves
+    // up, down, right, left
+    if (y + 1) <= 7 && board.pieces[(y + 1) as usize][x as usize].color != color {}
+    if (y - 1) >= 0 && board.pieces[(y - 1) as usize][x as usize].color != color {}
+    if (x + 1) <= 7 && board.pieces[(x + 1) as usize][x as usize].color != color {}
+    if (x - 1) >= 0 && board.pieces[(x - 1) as usize][x as usize].color != color {}
+
+    // moves can be represented as {-1, 1} x {-1, 1}
+    let a = vec![-1, 1];
+    let possible_moves: Vec<Move> = cartesian_product(&a, &a)
+        .iter()
+        .map(|pair| Move(pair.0, pair.1))
+        .collect();
+
+    return [valid_moves, possible_moves].concat();
 }
 
 pub fn queen_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Move> {
-    let mut valid_moves: Vec<Move> = Vec::new();
+    // https://www.chess.com/terms/chess-queen
+    // The valid moves for the queen is basically the union of the valid moves for the bishop and rook
+    let diagonal_moves = bishop_legal_moves(x, y, board, color);
+    let horizontal_vertical_moves = rook_legal_moves(x, y, board, color);
 
-    return valid_moves;
+    return [diagonal_moves, horizontal_vertical_moves].concat();
 }
 
 // Make compiler happy
