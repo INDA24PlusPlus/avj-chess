@@ -1,3 +1,5 @@
+use std::fmt::Error;
+
 use crate::utils::sets::cartesian_product;
 
 use super::board::Board;
@@ -13,8 +15,9 @@ pub enum PieceType {
     EMPTY,
 }
 // x, y
-#[derive(Clone)]
-pub struct Move(i32, i32);
+// The new position that a piece moves to
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Move(pub i32, pub i32);
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Color {
@@ -27,6 +30,75 @@ pub struct Piece {
     pub color: Color,
     pub piece_type: PieceType,
     pub has_moved: bool,
+}
+
+// Given a position, return the next valid positions
+pub fn get_legal_moves(board: Board, x: i32, y: i32, color: Color) -> Vec<Move> {
+    let piece = board.pieces[y as usize][x as usize];
+
+    let moves = match piece.piece_type {
+        PieceType::BISHOP => bishop_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::EMPTY => empty_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::KING => king_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::KNIGHT => knight_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::PAWN => pawn_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::QUEEN => queen_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::ROOK => rook_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+    };
+    return moves;
+}
+
+pub fn move_piece(piece_move: Move, x: i32, y: i32, board: &mut Board) -> Result<(), &'static str> {
+    let piece = board.pieces[x as usize][y as usize];
+    let legal_moves = get_legal_moves(*board, x, y, piece.color);
+
+    // Check if it is actually is a legal move
+    if !legal_moves.contains(&piece_move) {
+        return Err("Illegal move");
+    }
+
+    board.pieces[piece_move.1 as usize][piece_move.0 as usize] = piece;
+    board.pieces[y as usize][x as usize] = Piece {
+        color: Color::EMPTY,
+        piece_type: PieceType::EMPTY,
+        has_moved: false,
+    };
+    return Ok(());
 }
 
 pub fn bishop_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Move> {
@@ -197,19 +269,33 @@ pub fn king_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Move>
 
     // Pseudo legal moves
     // up, down, right, left
-    if (y + 1) <= 7 && board.pieces[(y + 1) as usize][x as usize].color != color {}
-    if (y - 1) >= 0 && board.pieces[(y - 1) as usize][x as usize].color != color {}
-    if (x + 1) <= 7 && board.pieces[(x + 1) as usize][x as usize].color != color {}
-    if (x - 1) >= 0 && board.pieces[(x - 1) as usize][x as usize].color != color {}
+    if (y + 1) <= 7 && board.pieces[(y + 1) as usize][x as usize].color != color {
+        valid_moves.push(Move(x, y + 1));
+    }
+    if (y - 1) >= 0 && board.pieces[(y - 1) as usize][x as usize].color != color {
+        valid_moves.push(Move(x, y - 1));
+    }
+    if (x + 1) <= 7 && board.pieces[(x + 1) as usize][x as usize].color != color {
+        valid_moves.push(Move(x + 1, y));
+    }
+    if (x - 1) >= 0 && board.pieces[(x - 1) as usize][x as usize].color != color {
+        valid_moves.push(Move(x - 1, y));
+    }
 
     // moves can be represented as {-1, 1} x {-1, 1}
     let a = vec![-1, 1];
-    let possible_moves: Vec<Move> = cartesian_product(&a, &a)
-        .iter()
-        .map(|pair| Move(pair.0, pair.1))
-        .collect();
-
-    return [valid_moves, possible_moves].concat();
+    for possible_move in cartesian_product(&a, &a) {
+        if possible_move.0 + x >= 0
+            && (possible_move.0 + x) <= 7
+            && (possible_move.1 + y) >= 0
+            && (possible_move.1 + y) <= 7
+            && board.pieces[(y + possible_move.1) as usize][(x + possible_move.0) as usize].color
+                != color
+        {
+            valid_moves.push(Move(x + possible_move.0, y + possible_move.1));
+        }
+    }
+    return valid_moves;
 }
 
 pub fn queen_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Move> {
