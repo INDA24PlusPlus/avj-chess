@@ -17,7 +17,7 @@
   - En passant
   - Three fold repetition
   - 50 move rule
-  - Castling
+  - Castling - Done
   - Pawn promotion
 - Flera tester av schack check i olika situationer
   - Se till så att kungen inte kan bli tagen

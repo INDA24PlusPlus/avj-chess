@@ -1,5 +1,6 @@
 use std::fmt::Error;
 
+use crate::game::Game;
 use crate::utils::sets::cartesian_product;
 
 use super::board::{in_check, positions_in_check, Board};
@@ -53,7 +54,10 @@ impl fmt::Display for Move {
 }
 impl PartialEq for Move {
     fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0 && self.1 == self.1
+        if self.0 == other.0 && self.1 == other.1 {
+            return true;
+        }
+        return false;
     }
 }
 impl Hash for Move {
@@ -98,6 +102,10 @@ fn filter_illegal_moves(
     for piece_move in psuedo_legal_moves {
         // Maybe ineffictient to clone every time
         // But easy way to reset the board
+        if board.pieces[piece_move.1 as usize][piece_move.0 as usize].piece_type == PieceType::KING
+        {
+            continue;
+        }
         let mut board_copy = board.clone();
         simulate_piece_move(&mut board_copy, piece_move, x, y).ok();
 
@@ -111,44 +119,88 @@ fn filter_illegal_moves(
     return legal_moves;
 }
 
-pub fn castle_possible(board: &Board, color: Color) -> bool {
+// Returns a tuple of boolean, first value if castlign to the right is possible, second value if castling to the left is possible
+// (right_possible, left_possible)
+pub fn castle_possible(board: &Board, color: Color) -> (bool, bool) {
     if in_check(*board, color) {
-        return false;
+        return (false, false);
     }
     if color == Color::WHITE {
-        let intermediate_positions = vec![(6, 7), (5, 7), (4, 7), (3, 7)];
-        let positions_in_check = positions_in_check(*board, color, intermediate_positions);
-        if positions_in_check {
-            return false;
-        }
+        let mut result = (false, false);
+        let right_intermediate_positions = vec![(6, 7), (5, 7)];
+        let left_intermediate_positions = vec![(2, 7), (3, 7), (1, 7)];
+        let right_positions_in_check =
+            positions_in_check(*board, color, right_intermediate_positions);
+        let left_positions_in_check =
+            positions_in_check(*board, color, left_intermediate_positions);
+
         let left_rook_pos = board.pieces[7][0];
         let right_rook_pos = board.pieces[7][7];
         let king_pos = board.pieces[7][4];
         // check rook to the left
-        if left_rook_pos.piece_type == PieceType::ROOK
+        if !left_positions_in_check
+            && left_rook_pos.piece_type == PieceType::ROOK
             && left_rook_pos.has_moved == false
-            && board.pieces[7][1].piece_type == PieceType::KING
+            && king_pos.piece_type == PieceType::KING
             && board.pieces[7][1].piece_type == PieceType::EMPTY
             && board.pieces[7][2].piece_type == PieceType::EMPTY
             && board.pieces[7][3].piece_type == PieceType::EMPTY
             && king_pos.piece_type == PieceType::KING
             && king_pos.has_moved == false
         {
-            return true;
+            result.1 = true;
         }
         // check rook to the right
-        if right_rook_pos.piece_type == PieceType::ROOK
+        if !right_positions_in_check
+            && right_rook_pos.piece_type == PieceType::ROOK
             && right_rook_pos.has_moved == false
             && board.pieces[7][6].piece_type == PieceType::EMPTY
             && board.pieces[7][5].piece_type == PieceType::EMPTY
             && king_pos.piece_type == PieceType::KING
             && king_pos.has_moved == false
         {
-            return true;
+            result.0 = true;
         }
+        return result;
     } else if color == Color::BLACK {
+        let mut result = (false, false);
+        let left_intermediate_positions = vec![(6, 0), (5, 0)];
+        let right_intermediate_positions = vec![(2, 0), (3, 0), (1, 0)];
+        let right_positions_in_check =
+            positions_in_check(*board, color, right_intermediate_positions);
+        let left_positions_in_check =
+            positions_in_check(*board, color, left_intermediate_positions);
+
+        let left_rook_pos = board.pieces[0][7];
+        let right_rook_pos = board.pieces[0][0];
+        let king_pos = board.pieces[0][4];
+        // check rook to the left
+        if !left_positions_in_check
+            && left_rook_pos.piece_type == PieceType::ROOK
+            && left_rook_pos.has_moved == false
+            && king_pos.piece_type == PieceType::KING
+            && board.pieces[0][6].piece_type == PieceType::EMPTY
+            && board.pieces[0][5].piece_type == PieceType::EMPTY
+            && king_pos.piece_type == PieceType::KING
+            && king_pos.has_moved == false
+        {
+            result.1 = true;
+        }
+        // check rook to the right
+        if !right_positions_in_check
+            && right_rook_pos.piece_type == PieceType::ROOK
+            && right_rook_pos.has_moved == false
+            && board.pieces[0][1].piece_type == PieceType::EMPTY
+            && board.pieces[0][2].piece_type == PieceType::EMPTY
+            && board.pieces[0][3].piece_type == PieceType::EMPTY
+            && king_pos.piece_type == PieceType::KING
+            && king_pos.has_moved == false
+        {
+            result.0 = true;
+        }
+        return result;
     }
-    return false;
+    return (false, false);
 }
 
 // get_legal_moves -> filter_illegal_moves -> in_check -> get_legal_moves (recursive infinite loop, bad)
@@ -259,25 +311,136 @@ pub fn get_legal_moves(board: Board, x: i32, y: i32, color: Color) -> Vec<Move> 
     return filter_illegal_moves(&board, moves, piece.color, x, y);
 }
 
-pub fn move_piece(piece_move: Move, x: i32, y: i32, board: &mut Board) -> Result<(), &'static str> {
+pub fn can_pawn_promote(board: &Board, color: Color) -> Option<(i32, i32)> {
+    if color == Color::WHITE {
+        for x in 0..8 {
+            if board.pieces[7][x].piece_type == PieceType::PAWN
+                && board.pieces[7][x].color == Color::WHITE
+            {
+                return Some((x as i32, 7));
+            }
+        }
+        None
+    } else {
+        for x in 0..8 {
+            if board.pieces[0][x].piece_type == PieceType::PAWN
+                && board.pieces[0][x].color == Color::BLACK
+            {
+                return Some((x as i32, 0));
+            }
+        }
+        None
+    }
+}
+
+// dir = 1 -> left, dir = -1 -> right
+pub fn make_castle_move(game: &mut Game, color: Color, dir: i32) {
+    if color == Color::WHITE {
+        if game.can_castle_white.0 && dir == -1 {
+            move_piece(Move(2, 7), 0, 7, game).ok();
+            move_piece(Move(3, 7), 0, 7, game).ok();
+        }
+        if game.can_castle_white.1 && dir == 1 {
+            move_piece(Move(6, 7), 7, 7, game).ok();
+            move_piece(Move(5, 7), 7, 7, game).ok();
+        }
+    } else if color == Color::BLACK {
+        if game.can_castle_black.0 && dir == -1 {
+            move_piece(Move(2, 0), 0, 0, game).ok();
+            move_piece(Move(3, 0), 0, 0, game).ok();
+        }
+        if game.can_castle_black.1 && dir == 1 {
+            move_piece(Move(6, 0), 7, 0, game).ok();
+            move_piece(Move(5, 0), 7, 0, game).ok();
+        }
+    }
+}
+
+pub fn move_piece(piece_move: Move, x: i32, y: i32, game: &mut Game) -> Result<(), &'static str> {
     if x > 7 || y > 7 || x < 0 || x < 0 {
         return Err("Invalid move variable");
     }
-    let piece = board.pieces[x as usize][y as usize];
-    let legal_moves = get_legal_moves(*board, x, y, piece.color);
+
+    let piece = game.board.pieces[y as usize][x as usize];
+    if piece.color != game.turn {
+        return Err("Not your piece");
+    }
+    let legal_moves = get_legal_moves(game.board, x, y, piece.color);
 
     // Check if it is actually is a legal move
     if !legal_moves.contains(&piece_move) {
         return Err("Illegal move");
     }
+    let possible_capture =
+        game.board.pieces[piece_move.1 as usize][piece_move.0 as usize].piece_type;
 
-    board.pieces[piece_move.1 as usize][piece_move.0 as usize] = piece;
-    board.pieces[y as usize][x as usize] = Piece {
+    game.board.pieces[piece_move.1 as usize][piece_move.0 as usize] = piece;
+    game.board.pieces[y as usize][x as usize] = Piece {
         color: Color::EMPTY,
         piece_type: PieceType::EMPTY,
         has_moved: false,
     };
+    update_game_state(
+        game.board,
+        game,
+        piece.color,
+        piece.piece_type,
+        piece_move,
+        possible_capture,
+    );
     return Ok(());
+}
+
+pub fn update_game_state(
+    board: Board,
+    game: &mut Game,
+    moved_color: Color,
+    moved_piece: PieceType,
+    piece_move: Move,
+    captured_piece: PieceType,
+) {
+    game.white_pawn_promotion = can_pawn_promote(&board, Color::WHITE);
+    game.black_pawn_promotion = can_pawn_promote(&board, Color::BLACK);
+
+    game.can_castle_black = castle_possible(&board, Color::BLACK);
+    game.can_castle_white = castle_possible(&board, Color::WHITE);
+
+    game.white_in_check = in_check(board, Color::WHITE);
+    game.black_in_check = in_check(board, Color::BLACK);
+
+    if moved_color == Color::WHITE {
+        game.turn = Color::BLACK;
+        game.white_moves.insert(0, (piece_move, moved_piece));
+    } else if moved_color == Color::BLACK {
+        game.turn = Color::WHITE;
+        game.black_moves.insert(0, (piece_move, moved_piece));
+    }
+
+    if captured_piece != PieceType::EMPTY {
+        if moved_color == Color::WHITE {
+            game.black_captures.push(captured_piece);
+        } else if moved_color == Color::BLACK {
+            game.white_captures.push(captured_piece);
+        }
+    }
+}
+
+pub fn promote_pawn(board: &mut Board, game: &mut Game, new_piece: PieceType) {
+    if game.white_pawn_promotion.is_some() {
+        let (x, y) = game.white_pawn_promotion.unwrap();
+        board.pieces[y as usize][x as usize] = Piece {
+            color: Color::WHITE,
+            piece_type: new_piece,
+            has_moved: false,
+        };
+    } else if game.black_pawn_promotion.is_some() {
+        let (x, y) = game.black_pawn_promotion.unwrap();
+        board.pieces[y as usize][x as usize] = Piece {
+            color: Color::BLACK,
+            piece_type: new_piece,
+            has_moved: false,
+        };
+    }
 }
 
 pub fn bishop_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Move> {

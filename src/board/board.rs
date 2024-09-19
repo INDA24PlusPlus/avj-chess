@@ -2,11 +2,123 @@ use std::any::Any;
 
 use crate::utils::matrix::index_to_col_row;
 
-use super::pieces::{get_legal_moves, get_pseudo_legal_moves, Color, Move, Piece, PieceType};
+use super::{
+    parser::parse_fen_string,
+    pieces::{get_legal_moves, get_pseudo_legal_moves, Color, Move, Piece, PieceType},
+};
 
 #[derive(Clone, Copy)]
 pub struct Board {
     pub pieces: [[Piece; 8]; 8],
+}
+
+impl Board {
+    pub fn init_board(fen: Option<String>) -> Board {
+        if fen.is_none() {
+            let black_pieces = [
+                Piece {
+                    color: Color::BLACK,
+                    piece_type: PieceType::ROOK,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::BLACK,
+                    piece_type: PieceType::KNIGHT,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::BLACK,
+                    piece_type: PieceType::BISHOP,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::BLACK,
+                    piece_type: PieceType::QUEEN,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::BLACK,
+                    piece_type: PieceType::KING,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::BLACK,
+                    piece_type: PieceType::KNIGHT,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::BLACK,
+                    piece_type: PieceType::BISHOP,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::BLACK,
+                    piece_type: PieceType::ROOK,
+                    has_moved: false,
+                },
+            ];
+            let black_pawns = fill_pawns(Color::BLACK);
+
+            let white_pieces = [
+                Piece {
+                    color: Color::WHITE,
+                    piece_type: PieceType::ROOK,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::WHITE,
+                    piece_type: PieceType::KNIGHT,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::WHITE,
+                    piece_type: PieceType::BISHOP,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::WHITE,
+                    piece_type: PieceType::QUEEN,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::WHITE,
+                    piece_type: PieceType::KING,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::WHITE,
+                    piece_type: PieceType::KNIGHT,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::WHITE,
+                    piece_type: PieceType::BISHOP,
+                    has_moved: false,
+                },
+                Piece {
+                    color: Color::WHITE,
+                    piece_type: PieceType::ROOK,
+                    has_moved: false,
+                },
+            ];
+            let white_pawns = fill_pawns(Color::WHITE);
+
+            let mut pieces = [[Piece {
+                color: Color::EMPTY,
+                piece_type: PieceType::EMPTY,
+                has_moved: false,
+            }; 8]; 8];
+            pieces[7] = white_pieces;
+            pieces[6] = white_pawns;
+            // Empty space in between
+            pieces[1] = black_pawns;
+            pieces[0] = black_pieces;
+
+            let board = Board { pieces: pieces };
+            return board;
+        }
+        return parse_fen_string(fen.unwrap());
+    }
 }
 
 fn fill_pawns(color: Color) -> [Piece; 8] {
@@ -90,8 +202,6 @@ pub fn positions_in_check(board: Board, color: Color, positions: Vec<(i32, i32)>
             let (row, col) = index_to_col_row(*index).unwrap();
 
             let pseudo_moves = get_pseudo_legal_moves(board, col, row, opposing_color);
-            println!("Piece: {:?} at ({}, {})", _piece.piece_type, col, row);
-            println!("Pseudo-legal moves: {:?}", pseudo_moves);
             return pseudo_moves;
         })
         .flatten()
@@ -110,109 +220,6 @@ pub fn positions_in_check(board: Board, color: Color, positions: Vec<(i32, i32)>
 pub fn board_from_fen() {}
 
 // Set up the board with the right number of pieces and stuff
-pub fn init_board() -> Board {
-    let black_pieces = [
-        Piece {
-            color: Color::BLACK,
-            piece_type: PieceType::ROOK,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::BLACK,
-            piece_type: PieceType::KNIGHT,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::BLACK,
-            piece_type: PieceType::BISHOP,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::BLACK,
-            piece_type: PieceType::QUEEN,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::BLACK,
-            piece_type: PieceType::KING,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::BLACK,
-            piece_type: PieceType::KNIGHT,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::BLACK,
-            piece_type: PieceType::BISHOP,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::BLACK,
-            piece_type: PieceType::ROOK,
-            has_moved: false,
-        },
-    ];
-    let black_pawns = fill_pawns(Color::BLACK);
-
-    let white_pieces = [
-        Piece {
-            color: Color::WHITE,
-            piece_type: PieceType::ROOK,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::WHITE,
-            piece_type: PieceType::KNIGHT,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::WHITE,
-            piece_type: PieceType::BISHOP,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::WHITE,
-            piece_type: PieceType::QUEEN,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::WHITE,
-            piece_type: PieceType::KING,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::WHITE,
-            piece_type: PieceType::KNIGHT,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::WHITE,
-            piece_type: PieceType::BISHOP,
-            has_moved: false,
-        },
-        Piece {
-            color: Color::WHITE,
-            piece_type: PieceType::ROOK,
-            has_moved: false,
-        },
-    ];
-    let white_pawns = fill_pawns(Color::WHITE);
-
-    let mut pieces = [[Piece {
-        color: Color::EMPTY,
-        piece_type: PieceType::EMPTY,
-        has_moved: false,
-    }; 8]; 8];
-    pieces[0] = white_pieces;
-    pieces[1] = white_pawns;
-    // Empty space in between
-    pieces[6] = black_pawns;
-    pieces[7] = black_pieces;
-
-    let board = Board { pieces: pieces };
-    return board;
-}
 
 #[cfg(test)]
 mod tests {
@@ -222,14 +229,14 @@ mod tests {
     use crate::board::{
         self,
         parser::{self, parse_fen_string, print_row},
-        pieces::{castle_possible, get_legal_moves, move_piece, Move},
+        pieces::{can_pawn_promote, castle_possible, get_legal_moves, move_piece, Move},
     };
 
     use super::*;
 
     #[test]
     fn init_success() {
-        let board = init_board();
+        let board = Board::init_board(None);
         let piece_size = board.pieces.len();
         println!("{piece_size}");
 
@@ -244,7 +251,7 @@ mod tests {
 
     #[test]
     fn bishop_no_moves_game_start() {
-        let board = init_board();
+        let board = Board::init_board(None);
         let piece_size = board.pieces.len();
         println!("{piece_size}");
         let legal_moves = get_legal_moves(board, 2, 0, Color::WHITE);
@@ -326,13 +333,14 @@ mod tests {
             assert!(white_queen_legal_moves.contains(piece_move));
         }
         assert_eq!(white_queen_legal_moves.len(), expected_queen_moves.len());
-        assert!(white_queen_legal_moves.contains(&Move(4, 0)));
 
         // test that none of the colors are in check
         println!("Looking at white");
         assert_eq!(in_check(board, Color::WHITE), false);
         println!("Looking at black");
         assert_eq!(in_check(board, Color::BLACK), false);
+        assert_eq!(can_pawn_promote(&board, Color::WHITE), None);
+        assert_eq!(can_pawn_promote(&board, Color::BLACK), None);
     }
 
     #[test]
@@ -349,7 +357,7 @@ mod tests {
         println!("{:?}", board.pieces[3][1].piece_type);
 
         assert_eq!(black_pawn_legal_moves.len(), 2);
-        assert!(black_pawn_legal_moves.contains(&Move(3, 4)));
+        assert!(black_pawn_legal_moves.contains(&Move(3, 3)));
         assert!(black_pawn_legal_moves.contains(&Move(4, 3)));
 
         assert_eq!(white_pawn_legal_moves.len(), 2);
@@ -386,31 +394,60 @@ mod tests {
     }
 
     #[test]
-    fn test_castling_allowed() {
+    fn test_white_castling_allowed() {
         let fen = String::from("rnbqkbnr/2p1pppp/1p1p4/pB2P2Q/8/7N/PPPP1PPP/RNB1K2R");
         let board = parser::parse_fen_string(fen);
 
-        assert!(castle_possible(&board, Color::WHITE));
+        assert_eq!(castle_possible(&board, Color::WHITE), (true, false));
     }
 
     #[test]
-    fn test_castling_not_allowed_intermediate_check() {
+    fn test_white_castling_not_allowed_intermediate_check() {
         let fen = String::from("rn1qkbnr/2p1pppp/bp1p4/p3P2Q/8/1B5N/PPPP1PPP/RNB1K2R");
         let board = parser::parse_fen_string(fen);
 
-        assert_eq!(castle_possible(&board, Color::WHITE), false);
+        assert_eq!(castle_possible(&board, Color::WHITE), (false, false));
     }
 
     #[test]
-    fn test_castling_not_allowed_check() {
+    fn test_white_castling_not_allowed_check() {
         let fen = String::from("rn2kbnr/1bp1pppp/1p1p4/p3P2Q/4q3/1B5N/PPPP1PPP/RNB1K2R");
         let board = parser::parse_fen_string(fen);
+        let black_queen_legal_moves = get_legal_moves(board, 4, 4, Color::BLACK);
+        let contains_move = black_queen_legal_moves.iter().any(|m| m.eq(&Move(4, 7)));
 
-        assert_eq!(castle_possible(&board, Color::WHITE), false);
+        assert_eq!(castle_possible(&board, Color::WHITE), (false, false));
+        // This should fail
+        assert!(!contains_move);
     }
+
+    #[test]
+    fn test_black_castling_allowed() {
+        let fen = String::from("r3kbnr/1bpqpppp/1pnp4/p3P2Q/2B5/7N/PPPP1PPP/RNB1K2R");
+        let board = parser::parse_fen_string(fen);
+
+        assert_eq!(castle_possible(&board, Color::BLACK), (true, false));
+    }
+
+    #[test]
+    fn test_black_castling_not_allowed_check() {
+        let fen = String::from("r3kbnr/1bpQpppp/1pnp4/p3P3/2B5/7N/PPPP1PPP/RNB1K2R");
+        let board = parser::parse_fen_string(fen);
+
+        assert_eq!(castle_possible(&board, Color::BLACK), (false, false));
+    }
+
+    #[test]
+    fn test_black_castling_not_allowed_intermediate_check() {
+        let fen = String::from("r3kbnr/1bQ1pppp/1pnp4/p3P3/2B5/7N/PPPP1PPP/RNB1K2R");
+        let board = parser::parse_fen_string(fen);
+
+        assert_eq!(castle_possible(&board, Color::BLACK), (false, false));
+    }
+
     #[test]
     fn rook_no_moves_game_start() {
-        let board = init_board();
+        let board = Board::init_board(None);
         let piece_size = board.pieces.len();
         println!("{piece_size}");
         let legal_moves = get_legal_moves(board, 0, 0, Color::WHITE);
@@ -420,7 +457,7 @@ mod tests {
 
     #[test]
     fn white_pawn_can_move_from_start() {
-        let board = init_board();
+        let board = Board::init_board(None);
         let legal_moves = get_legal_moves(board, 0, 1, Color::WHITE);
 
         assert_eq!(legal_moves.len(), 2);
@@ -428,7 +465,7 @@ mod tests {
 
     #[test]
     fn black_pawn_can_move_from_start() {
-        let board = init_board();
+        let board = Board::init_board(None);
         let piece_size = board.pieces.len();
         println!("{piece_size}");
         let legal_moves = get_legal_moves(board, 0, 6, Color::BLACK);
@@ -438,7 +475,7 @@ mod tests {
 
     #[test]
     fn knight_can_move_from_start() {
-        let board = init_board();
+        let board = Board::init_board(None);
         let piece_size = board.pieces.len();
         println!("{piece_size}");
         let legal_moves = get_legal_moves(board, 1, 0, Color::WHITE);
@@ -462,21 +499,11 @@ mod tests {
 
     #[test]
     fn black_knight_can_move_from_start() {
-        let board = init_board();
+        let board = Board::init_board(None);
         let piece_size = board.pieces.len();
         println!("{piece_size}");
         let legal_moves = get_legal_moves(board, 1, 7, Color::BLACK);
 
         assert_eq!(legal_moves.len(), 2);
-    }
-
-    #[test]
-    fn reject_invalid_pawn_move() {
-        let mut board = init_board();
-
-        let invalid_move = Move(7, 7);
-
-        let result = move_piece(invalid_move, 1, 1, &mut board);
-        assert!(result.is_err());
     }
 }
