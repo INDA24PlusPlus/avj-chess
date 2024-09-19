@@ -314,46 +314,53 @@ pub fn get_legal_moves(board: Board, x: i32, y: i32, color: Color) -> Vec<Move> 
 pub fn can_pawn_promote(board: &Board, color: Color) -> Option<(i32, i32)> {
     if color == Color::WHITE {
         for x in 0..8 {
-            if board.pieces[7][x].piece_type == PieceType::PAWN
-                && board.pieces[7][x].color == Color::WHITE
+            if board.pieces[0][x].piece_type == PieceType::PAWN
+                && board.pieces[0][x].color == Color::WHITE
             {
-                return Some((x as i32, 7));
+                return Some((x as i32, 0));
             }
         }
         None
     } else {
         for x in 0..8 {
-            if board.pieces[0][x].piece_type == PieceType::PAWN
-                && board.pieces[0][x].color == Color::BLACK
+            if board.pieces[7][x].piece_type == PieceType::PAWN
+                && board.pieces[7][x].color == Color::BLACK
             {
-                return Some((x as i32, 0));
+                return Some((x as i32, 7));
             }
         }
         None
     }
 }
 
-// dir = 1 -> left, dir = -1 -> right
-pub fn make_castle_move(game: &mut Game, color: Color, dir: i32) {
+// dir = -1 -> left, dir = 1 -> right
+pub fn make_castle_move(game: &mut Game, color: Color, dir: i32) -> Result<(), &'static str> {
     if color == Color::WHITE {
-        if game.can_castle_white.0 && dir == -1 {
-            move_piece(Move(2, 7), 0, 7, game).ok();
-            move_piece(Move(3, 7), 0, 7, game).ok();
+        if game.can_castle_white.1 && dir == -1 {
+            simulate_piece_move(&mut game.board, Move(2, 7), 4, 7).ok();
+            simulate_piece_move(&mut game.board, Move(3, 7), 0, 7).ok();
+            return Ok(());
         }
-        if game.can_castle_white.1 && dir == 1 {
-            move_piece(Move(6, 7), 7, 7, game).ok();
-            move_piece(Move(5, 7), 7, 7, game).ok();
+        if game.can_castle_white.0 && dir == 1 {
+            simulate_piece_move(&mut game.board, Move(6, 7), 4, 7).ok();
+            simulate_piece_move(&mut game.board, Move(5, 7), 7, 7).ok();
+            return Ok(());
         }
+        return Err("Could not castle");
     } else if color == Color::BLACK {
-        if game.can_castle_black.0 && dir == -1 {
-            move_piece(Move(2, 0), 0, 0, game).ok();
-            move_piece(Move(3, 0), 0, 0, game).ok();
+        if game.can_castle_black.1 && dir == -1 {
+            simulate_piece_move(&mut game.board, Move(2, 0), 4, 0).ok();
+            simulate_piece_move(&mut game.board, Move(3, 0), 0, 0).ok();
+            return Ok(());
         }
-        if game.can_castle_black.1 && dir == 1 {
-            move_piece(Move(6, 0), 7, 0, game).ok();
-            move_piece(Move(5, 0), 7, 0, game).ok();
+        if game.can_castle_black.0 && dir == 1 {
+            simulate_piece_move(&mut game.board, Move(6, 0), 4, 0).ok();
+            simulate_piece_move(&mut game.board, Move(5, 0), 7, 0).ok();
+            return Ok(());
         }
+        return Err("Could not castle");
     }
+    return Err("Could not castle");
 }
 
 pub fn move_piece(piece_move: Move, x: i32, y: i32, game: &mut Game) -> Result<(), &'static str> {
@@ -425,21 +432,31 @@ pub fn update_game_state(
     }
 }
 
-pub fn promote_pawn(board: &mut Board, game: &mut Game, new_piece: PieceType) {
-    if game.white_pawn_promotion.is_some() {
+pub fn promote_pawn(
+    game: &mut Game,
+    new_piece: PieceType,
+    color: Color,
+) -> Result<(), &'static str> {
+    if color == Color::WHITE && game.white_pawn_promotion.is_some() {
         let (x, y) = game.white_pawn_promotion.unwrap();
-        board.pieces[y as usize][x as usize] = Piece {
+        game.board.pieces[y as usize][x as usize] = Piece {
             color: Color::WHITE,
             piece_type: new_piece,
             has_moved: false,
         };
-    } else if game.black_pawn_promotion.is_some() {
+        game.white_pawn_promotion = None;
+        Ok(())
+    } else if color == Color::BLACK && game.black_pawn_promotion.is_some() {
         let (x, y) = game.black_pawn_promotion.unwrap();
-        board.pieces[y as usize][x as usize] = Piece {
+        game.board.pieces[y as usize][x as usize] = Piece {
             color: Color::BLACK,
             piece_type: new_piece,
             has_moved: false,
         };
+        game.black_pawn_promotion = None;
+        Ok(())
+    } else {
+        return Err("No pawn to promote");
     }
 }
 

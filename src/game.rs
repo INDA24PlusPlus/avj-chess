@@ -40,7 +40,10 @@ impl Game {
 
 #[cfg(test)]
 mod tests {
-    use crate::board;
+    use crate::board::{
+        self,
+        pieces::{make_castle_move, promote_pawn},
+    };
 
     use super::*;
 
@@ -79,5 +82,52 @@ mod tests {
         assert_eq!(game.board.pieces[4][4].color, Color::WHITE);
         assert_eq!(game.board.pieces[5][4].piece_type, PieceType::EMPTY);
         assert_eq!(game.board.pieces[5][4].color, Color::EMPTY);
+    }
+
+    #[test]
+    fn white_pawn_promotion_updates_game_state() {
+        let mut game = Game::new(Some(String::from(
+            "r3kbnr/1PQ1pppp/1pnp4/p3P3/2B5/7N/P1PP1PPP/RNB1K2R",
+        )));
+
+        let promotion_move = Move(1, 0);
+        let result = board::pieces::move_piece(promotion_move, 1, 1, &mut game);
+
+        assert!(result.is_ok());
+        assert_eq!(game.white_pawn_promotion, Some((1, 0)));
+        assert_eq!(game.board.pieces[0][1].piece_type, PieceType::PAWN);
+    }
+
+    #[test]
+    fn make_white_pawn_promotion() {
+        let mut game = Game::new(Some(String::from(
+            "r3kbnr/1PQ1pppp/1pnp4/p3P3/2B5/7N/P1PP1PPP/RNB1K2R",
+        )));
+
+        let promotion_move = Move(1, 0);
+        board::pieces::move_piece(promotion_move, 1, 1, &mut game).ok();
+
+        assert!(promote_pawn(&mut game, PieceType::QUEEN, Color::WHITE).is_ok());
+        assert_eq!(game.board.pieces[0][1].piece_type, PieceType::QUEEN);
+        assert_eq!(game.white_pawn_promotion, None);
+        // test that black pawn promotion fails
+        assert!(promote_pawn(&mut game, PieceType::QUEEN, Color::BLACK).is_err())
+    }
+
+    #[test]
+    fn white_right_perform_castling() {
+        let mut game = Game::new(Some(String::from(
+            "rnbqkbnr/2p1pppp/1p1p4/p3P2Q/8/7N/PPPP1PPP/RNB1KB1R",
+        )));
+
+        // make space for castling
+        board::pieces::move_piece(Move(4, 6), 5, 7, &mut game).ok();
+
+        let result = make_castle_move(&mut game, Color::WHITE, 1);
+        assert!(result.is_ok());
+        assert_eq!(game.can_castle_white, (true, false));
+
+        assert_eq!(game.board.pieces[7][6].piece_type, PieceType::KING);
+        assert_eq!(game.board.pieces[7][5].piece_type, PieceType::ROOK);
     }
 }
