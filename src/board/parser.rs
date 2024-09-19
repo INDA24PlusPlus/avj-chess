@@ -59,16 +59,18 @@ pub fn parse_fen_string(fen_string: String) -> Board {
                 }
                 offset_by_empty_spots = offset_by_empty_spots + (n_empty_spots as usize);
             } else if black_piece_map.get(&piece).is_some() {
+                let piece_type = *(black_piece_map.get(&piece).unwrap());
                 board_row[file + offset_by_empty_spots] = Piece {
                     color: Color::BLACK,
-                    has_moved: false,
-                    piece_type: *(black_piece_map.get(&piece).unwrap()),
+                    has_moved: piece_type == PieceType::PAWN && rank != 1,
+                    piece_type,
                 };
             } else if white_piece_map.get(&piece).is_some() {
+                let piece_type = *(white_piece_map.get(&piece).unwrap());
                 board_row[file + offset_by_empty_spots] = Piece {
                     color: Color::WHITE,
-                    has_moved: false,
-                    piece_type: *(white_piece_map.get(&piece).unwrap()),
+                    has_moved: piece_type == PieceType::PAWN && rank != 6,
+                    piece_type,
                 };
             }
         }

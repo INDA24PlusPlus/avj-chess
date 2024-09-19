@@ -12,7 +12,6 @@
 
 ## Todo
 
-- Parsing av fen sträng + tester för det
 - Ordentliga tester för varje pjäs legala moves i olika situationer
 - Implementation av specialregler
   - En passant
@@ -21,4 +20,4 @@
   - Castling
   - Pawn promotion
 - Flera tester av schack check i olika situationer
-  - Fixa recursion bugg
+  - Se till så att kungen inte kan bli tagen

@@ -2,7 +2,7 @@ use std::fmt::Error;
 
 use crate::utils::sets::cartesian_product;
 
-use super::board::{in_check, Board};
+use super::board::{in_check, positions_in_check, Board};
 use std::fmt;
 
 #[derive(Clone, PartialEq, Copy, Debug)]
@@ -92,29 +92,73 @@ fn filter_illegal_moves(
     x: i32,
     y: i32,
 ) -> Vec<Move> {
-    let mut board_copy = board.clone();
     let mut legal_moves: Vec<Move> = Vec::new();
 
     // check what happens after applying moves
     for piece_move in psuedo_legal_moves {
+        // Maybe ineffictient to clone every time
+        // But easy way to reset the board
+        let mut board_copy = board.clone();
         simulate_piece_move(&mut board_copy, piece_move, x, y).ok();
 
+        // check if not in check after that specific move
         if !in_check(board_copy, color) {
             legal_moves.push(piece_move);
         }
         // undo move for next iteration
-        board_copy = board.clone();
     }
 
     return legal_moves;
 }
+
+pub fn castle_possible(board: &Board, color: Color) -> bool {
+    if in_check(*board, color) {
+        return false;
+    }
+    if color == Color::WHITE {
+        let intermediate_positions = vec![(6, 7), (5, 7), (4, 7), (3, 7)];
+        let positions_in_check = positions_in_check(*board, color, intermediate_positions);
+        if positions_in_check {
+            return false;
+        }
+        let left_rook_pos = board.pieces[7][0];
+        let right_rook_pos = board.pieces[7][7];
+        let king_pos = board.pieces[7][4];
+        // check rook to the left
+        if left_rook_pos.piece_type == PieceType::ROOK
+            && left_rook_pos.has_moved == false
+            && board.pieces[7][1].piece_type == PieceType::KING
+            && board.pieces[7][1].piece_type == PieceType::EMPTY
+            && board.pieces[7][2].piece_type == PieceType::EMPTY
+            && board.pieces[7][3].piece_type == PieceType::EMPTY
+            && king_pos.piece_type == PieceType::KING
+            && king_pos.has_moved == false
+        {
+            return true;
+        }
+        // check rook to the right
+        if right_rook_pos.piece_type == PieceType::ROOK
+            && right_rook_pos.has_moved == false
+            && board.pieces[7][6].piece_type == PieceType::EMPTY
+            && board.pieces[7][5].piece_type == PieceType::EMPTY
+            && king_pos.piece_type == PieceType::KING
+            && king_pos.has_moved == false
+        {
+            return true;
+        }
+    } else if color == Color::BLACK {
+    }
+    return false;
+}
+
+// get_legal_moves -> filter_illegal_moves -> in_check -> get_legal_moves (recursive infinite loop, bad)
 
 fn simulate_piece_move(board: &mut Board, piece_move: Move, x: i32, y: i32) -> Result<(), &str> {
     if x > 7 || y > 7 || x < 0 || x < 0 {
         return Err("Invalid move variable");
     }
 
-    let piece = board.pieces[x as usize][y as usize];
+    let piece = board.pieces[y as usize][x as usize];
     board.pieces[piece_move.1 as usize][piece_move.0 as usize] = piece;
     board.pieces[y as usize][x as usize] = Piece {
         color: Color::EMPTY,
@@ -125,6 +169,50 @@ fn simulate_piece_move(board: &mut Board, piece_move: Move, x: i32, y: i32) -> R
     return Ok(());
 }
 
+pub fn get_pseudo_legal_moves(board: Board, x: i32, y: i32, color: Color) -> Vec<Move> {
+    let piece = board.pieces[y as usize][x as usize];
+
+    let moves = match piece.piece_type {
+        PieceType::BISHOP => bishop_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::EMPTY => vec![],
+        PieceType::KING => king_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::KNIGHT => knight_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::PAWN => pawn_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            &board,
+            piece.color,
+        ),
+        PieceType::QUEEN => queen_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+        PieceType::ROOK => rook_legal_moves(
+            x.try_into().unwrap(),
+            y.try_into().unwrap(),
+            board,
+            piece.color,
+        ),
+    };
+    return moves;
+}
 // Given a position, return the next valid positions
 pub fn get_legal_moves(board: Board, x: i32, y: i32, color: Color) -> Vec<Move> {
     let piece = board.pieces[y as usize][x as usize];
@@ -168,8 +256,7 @@ pub fn get_legal_moves(board: Board, x: i32, y: i32, color: Color) -> Vec<Move> 
             piece.color,
         ),
     };
-    //return filter_illegal_moves(&board, moves, piece.color, x, y);
-    return uniq_moves(moves);
+    return filter_illegal_moves(&board, moves, piece.color, x, y);
 }
 
 pub fn move_piece(piece_move: Move, x: i32, y: i32, board: &mut Board) -> Result<(), &'static str> {
@@ -198,9 +285,7 @@ pub fn bishop_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Mov
     // Go row by row and check where bishop can go, if no legal moves in the next row then break out of loops
 
     // 1. go right up, loop over all rows i.e 8 rows
-    // (2, 0) => (1, 1)
-    // i = 1 => 2 + (0 -1) = 1, i = 2 => 2 + (0 - 2) = 0,
-    for i in (y + 1)..7 {
+    for i in (y + 1)..8 {
         let col: i32 = x + (y - i);
         if col > 7 || col < 0 {
             break;
@@ -235,7 +320,7 @@ pub fn bishop_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Mov
     }
 
     // 3. go left up
-    for i in (y + 1)..7 {
+    for i in (y + 1)..8 {
         let col: i32 = x + (i - y);
         if col > 7 || col < 0 {
             break;
@@ -278,33 +363,62 @@ pub fn bishop_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Mov
 pub fn pawn_legal_moves(x: i32, y: i32, board: &Board, color: Color) -> Vec<Move> {
     let mut valid_moves: Vec<Move> = Vec::new();
     let piece = board.pieces[y as usize][x as usize];
-
-    if y < 7
-        && board.pieces[(y + 1) as usize][x as usize].color != color
-        && board.pieces[(y + 1) as usize][x as usize].piece_type == PieceType::EMPTY
-    {
-        valid_moves.push(Move(x, y + 1));
-        if !piece.has_moved
-            && y < 6
-            && board.pieces[(y + 2) as usize][x as usize].color != color
-            && board.pieces[(y + 2) as usize][x as usize].piece_type == PieceType::EMPTY
+    if color == Color::BLACK {
+        if y < 7
+            && board.pieces[(y + 1) as usize][x as usize].color != color
+            && board.pieces[(y + 1) as usize][x as usize].piece_type == PieceType::EMPTY
         {
-            valid_moves.push(Move(x, y + 2));
+            valid_moves.push(Move(x, y + 1));
+            if !piece.has_moved
+                && y < 6
+                && board.pieces[(y + 2) as usize][x as usize].color != color
+                && board.pieces[(y + 2) as usize][x as usize].piece_type == PieceType::EMPTY
+            {
+                valid_moves.push(Move(x, y + 2));
+            }
         }
-    }
-    if x > 0
-        && y < 7
-        && board.pieces[(y + 1) as usize][(x - 1) as usize].color != color
-        && board.pieces[(y + 1) as usize][(x - 1) as usize].piece_type != PieceType::EMPTY
-    {
-        valid_moves.push(Move(x - 1, y + 1));
-    }
-    if x < 7
-        && y < 7
-        && board.pieces[(y + 1) as usize][(x + 1) as usize].color != color
-        && board.pieces[(y + 1) as usize][(x + 1) as usize].piece_type != PieceType::EMPTY
-    {
-        valid_moves.push(Move(x + 1, y + 1));
+        if x > 0
+            && y < 7
+            && board.pieces[(y + 1) as usize][(x - 1) as usize].color != color
+            && board.pieces[(y + 1) as usize][(x - 1) as usize].piece_type != PieceType::EMPTY
+        {
+            valid_moves.push(Move(x - 1, y + 1));
+        }
+        if x < 7
+            && y < 7
+            && board.pieces[(y + 1) as usize][(x + 1) as usize].color != color
+            && board.pieces[(y + 1) as usize][(x + 1) as usize].piece_type != PieceType::EMPTY
+        {
+            valid_moves.push(Move(x + 1, y + 1));
+        }
+    } else if color == Color::WHITE {
+        if y > 0
+            && board.pieces[(y - 1) as usize][x as usize].color != color
+            && board.pieces[(y - 1) as usize][x as usize].piece_type == PieceType::EMPTY
+        {
+            valid_moves.push(Move(x, y - 1));
+            if !piece.has_moved
+                && y > 1
+                && board.pieces[(y - 2) as usize][x as usize].color != color
+                && board.pieces[(y - 2) as usize][x as usize].piece_type == PieceType::EMPTY
+            {
+                valid_moves.push(Move(x, y - 2));
+            }
+        }
+        if x > 0
+            && y > 0
+            && board.pieces[(y - 1) as usize][(x - 1) as usize].color != color
+            && board.pieces[(y - 1) as usize][(x - 1) as usize].piece_type != PieceType::EMPTY
+        {
+            valid_moves.push(Move(x - 1, y - 1));
+        }
+        if x < 7
+            && y > 0
+            && board.pieces[(y - 1) as usize][(x + 1) as usize].color != color
+            && board.pieces[(y - 1) as usize][(x + 1) as usize].piece_type != PieceType::EMPTY
+        {
+            valid_moves.push(Move(x + 1, y - 1));
+        }
     }
 
     return valid_moves;
@@ -316,7 +430,7 @@ pub fn rook_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Move>
     // 1. check straight line, y axis
 
     // 1.1 check up dir
-    for i in (y + 1)..7 {
+    for i in (y + 1)..8 {
         // check if anything here, if not add move and continue loop, otherwise break out
 
         if board.pieces[i as usize][x as usize].color == Color::EMPTY {
@@ -344,7 +458,7 @@ pub fn rook_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Move>
     // 2. check straight line in x-axis
 
     //2.1 check to right dir
-    for i in (x + 1)..7 {
+    for i in (x + 1)..8 {
         if board.pieces[y as usize][i as usize].color == Color::EMPTY {
             valid_moves.push(Move(i, y));
         } else if board.pieces[y as usize][i as usize].color != color {

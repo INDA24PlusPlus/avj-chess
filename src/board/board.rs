@@ -2,7 +2,7 @@ use std::any::Any;
 
 use crate::utils::matrix::index_to_col_row;
 
-use super::pieces::{get_legal_moves, Color, Move, Piece, PieceType};
+use super::pieces::{get_legal_moves, get_pseudo_legal_moves, Color, Move, Piece, PieceType};
 
 #[derive(Clone, Copy)]
 pub struct Board {
@@ -44,14 +44,8 @@ pub fn in_check(board: Board, color: Color) -> bool {
         .map(|(_piece, index)| {
             let (row, col) = index_to_col_row(*index).unwrap();
 
-            let pseudo_moves = get_legal_moves(board, col, row, opposing_color);
-            if pseudo_moves.contains(&Move(4, 0)) && color == Color::BLACK {
-                println!(
-                    "Row: {:?}, Col: {:?}, Piece: {:?}, Index: {:?}, Color: {:?}",
-                    row, col, _piece.piece_type, index, _piece.color
-                );
-                println!("Found a king in check, moves {:?}", pseudo_moves);
-            }
+            let pseudo_moves = get_pseudo_legal_moves(board, col, row, opposing_color);
+
             return pseudo_moves;
         })
         .flatten()
@@ -65,6 +59,47 @@ pub fn in_check(board: Board, color: Color) -> bool {
                 == PieceType::KING
         {
             // in check and want to return something
+            check = true;
+        }
+    }
+
+    return check;
+}
+
+// Little confusing name but basically we check what would happen if the king was in that position
+// basically only used for castling
+pub fn positions_in_check(board: Board, color: Color, positions: Vec<(i32, i32)>) -> bool {
+    let mut opposing_color = Color::EMPTY;
+    if color == Color::WHITE {
+        opposing_color = Color::BLACK;
+    } else if color == Color::BLACK {
+        opposing_color = Color::WHITE;
+    }
+    let opposing_pieces: Vec<(&Piece, usize)> = board
+        .pieces
+        .iter()
+        .flatten()
+        .enumerate()
+        .map(|(i, piece)| (piece, i))
+        .filter(|(piece, _index)| piece.color == opposing_color)
+        .collect();
+
+    let possible_moves: Vec<Move> = opposing_pieces
+        .iter()
+        .map(|(_piece, index)| {
+            let (row, col) = index_to_col_row(*index).unwrap();
+
+            let pseudo_moves = get_pseudo_legal_moves(board, col, row, opposing_color);
+            println!("Piece: {:?} at ({}, {})", _piece.piece_type, col, row);
+            println!("Pseudo-legal moves: {:?}", pseudo_moves);
+            return pseudo_moves;
+        })
+        .flatten()
+        .collect();
+    let mut check = false;
+
+    for (index, possible_move) in possible_moves.iter().enumerate() {
+        if positions.contains(&(possible_move.0, possible_move.1)) {
             check = true;
         }
     }
@@ -185,8 +220,9 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::board::{
-        parser::{self, parse_fen_string},
-        pieces::{get_legal_moves, move_piece, Move},
+        self,
+        parser::{self, parse_fen_string, print_row},
+        pieces::{castle_possible, get_legal_moves, move_piece, Move},
     };
 
     use super::*;
@@ -245,12 +281,24 @@ mod tests {
         let white_rook_legal_moves = get_legal_moves(board, 7, 7, Color::WHITE);
         let black_rook_legal_moves = get_legal_moves(board, 0, 0, Color::BLACK);
         let white_bishop_legal_moves = get_legal_moves(board, 5, 7, Color::WHITE);
+        let white_pawn_legal_moves = get_legal_moves(board, 0, 6, Color::WHITE);
+        let black_pawn_legal_moves = get_legal_moves(board, 6, 1, Color::BLACK);
 
         assert_eq!(white_rook_legal_moves.len(), 1);
         assert!(white_rook_legal_moves.contains(&Move(6, 7)));
         assert_eq!(black_rook_legal_moves.len(), 2);
         assert_eq!(black_bishop_legal_moves.len(), 7);
         assert_eq!(white_bishop_legal_moves.len(), 5);
+        // Test pawn
+
+        assert_eq!(black_pawn_legal_moves.len(), 2);
+        assert!(black_pawn_legal_moves.contains(&Move(6, 2)));
+        assert!(black_pawn_legal_moves.contains(&Move(6, 3)));
+
+        assert_eq!(white_pawn_legal_moves.len(), 2);
+        assert!(white_pawn_legal_moves.contains(&Move(0, 5)));
+        assert!(white_pawn_legal_moves.contains(&Move(0, 4)));
+
         // right: (1,1) (0, 2)
 
         assert_eq!(white_knight_legal_moves.len(), 3);
@@ -271,6 +319,7 @@ mod tests {
             Move(4, 6),
             Move(7, 1),
             Move(5, 1),
+            Move(3, 7),
         ];
         println!("Checking white queen moves:{:?} ", white_queen_legal_moves);
         for piece_move in &expected_queen_moves {
@@ -284,6 +333,80 @@ mod tests {
         assert_eq!(in_check(board, Color::WHITE), false);
         println!("Looking at black");
         assert_eq!(in_check(board, Color::BLACK), false);
+    }
+
+    #[test]
+    fn test_pawn_situation() {
+        let fen = String::from("rnbqkbnr/2p1pppp/1p1p4/p3P2Q/8/7N/PPPP1PPP/RNB1KB1R");
+        let board = parser::parse_fen_string(fen);
+
+        for i in 0..8 {
+            print_row(board.pieces[i]);
+        }
+
+        let white_pawn_legal_moves = get_legal_moves(board, 4, 3, Color::WHITE);
+        let black_pawn_legal_moves = get_legal_moves(board, 3, 2, Color::BLACK);
+        println!("{:?}", board.pieces[3][1].piece_type);
+
+        assert_eq!(black_pawn_legal_moves.len(), 2);
+        assert!(black_pawn_legal_moves.contains(&Move(3, 4)));
+        assert!(black_pawn_legal_moves.contains(&Move(4, 3)));
+
+        assert_eq!(white_pawn_legal_moves.len(), 2);
+        assert!(white_pawn_legal_moves.contains(&Move(4, 2)));
+        assert!(white_pawn_legal_moves.contains(&Move(3, 2)));
+    }
+
+    #[test]
+    fn test_checking() {
+        let fen = String::from("rnbqkbnr/2p1pppp/1p1p4/pB2P2Q/8/7N/PPPP1PPP/RNB1K2R");
+        let board = parser::parse_fen_string(fen);
+
+        let black_pawn_legal_moves = get_legal_moves(board, 2, 1, Color::BLACK);
+        let black_knight_legal_moves = get_legal_moves(board, 1, 0, Color::BLACK);
+        let black_queen_legal_moves = get_legal_moves(board, 3, 0, Color::BLACK);
+        let pseudo_moves = get_pseudo_legal_moves(board, 1, 0, Color::BLACK);
+
+        println!("{:?}", board.pieces[0][1].piece_type);
+        println!("{:?}", pseudo_moves);
+
+        // Only one legal move since that is the only move that gets rid of the check
+        assert_eq!(black_pawn_legal_moves.len(), 1);
+        assert!(black_pawn_legal_moves.contains(&Move(2, 2)));
+
+        assert_eq!(black_knight_legal_moves.len(), 2);
+        assert!(black_knight_legal_moves.contains(&Move(2, 2)));
+        assert!(black_knight_legal_moves.contains(&Move(3, 1)));
+
+        assert_eq!(black_queen_legal_moves.len(), 1);
+        assert!(black_queen_legal_moves.contains(&Move(3, 1)));
+
+        assert_eq!(in_check(board, Color::BLACK), true);
+        assert_eq!(in_check(board, Color::WHITE), false);
+    }
+
+    #[test]
+    fn test_castling_allowed() {
+        let fen = String::from("rnbqkbnr/2p1pppp/1p1p4/pB2P2Q/8/7N/PPPP1PPP/RNB1K2R");
+        let board = parser::parse_fen_string(fen);
+
+        assert!(castle_possible(&board, Color::WHITE));
+    }
+
+    #[test]
+    fn test_castling_not_allowed_intermediate_check() {
+        let fen = String::from("rn1qkbnr/2p1pppp/bp1p4/p3P2Q/8/1B5N/PPPP1PPP/RNB1K2R");
+        let board = parser::parse_fen_string(fen);
+
+        assert_eq!(castle_possible(&board, Color::WHITE), false);
+    }
+
+    #[test]
+    fn test_castling_not_allowed_check() {
+        let fen = String::from("rn2kbnr/1bp1pppp/1p1p4/p3P2Q/4q3/1B5N/PPPP1PPP/RNB1K2R");
+        let board = parser::parse_fen_string(fen);
+
+        assert_eq!(castle_possible(&board, Color::WHITE), false);
     }
     #[test]
     fn rook_no_moves_game_start() {
