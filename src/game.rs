@@ -181,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    fn test_check_mate() {
+    fn test_white_check_mate() {
         let mut game = Game::new(Some(String::from(
             "rnbqkbnr/pppp1ppp/4p3/8/6P1/5P2/PPPPP2P/RNBQKBNR",
         )));
@@ -191,8 +191,23 @@ mod tests {
         let queen_move = Move(7, 4);
         let result = board::pieces::move_piece(queen_move, 3, 0, &mut game);
 
-        let possible_moves = board::pieces::possible_moves_for_color(&mut game, Color::WHITE);
         assert!(result.is_ok());
         assert_eq!(game.check_mate_white, true);
+        assert_eq!(game.check_mate_black, false)
+    }
+
+    #[test]
+    fn test_black_check_mate() {
+        let mut game = Game::new(Some(String::from(
+            "rnbqkbnr/ppppp2p/5p2/6p1/8/4P3/PPPP1PPP/RNBQKBNR",
+        )));
+
+        let queen_move = Move(7, 3);
+        let result = board::pieces::move_piece(queen_move, 3, 7, &mut game);
+
+        println!("{:?}", result.err());
+        assert!(result.is_ok());
+        assert_eq!(game.check_mate_white, false);
+        assert_eq!(game.check_mate_black, true)
     }
 }
