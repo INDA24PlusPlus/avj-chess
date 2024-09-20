@@ -17,6 +17,8 @@ pub struct Game {
     pub black_pawn_promotion: Option<(i32, i32)>,
     pub white_moves: Vec<(Move, PieceType)>,
     pub black_moves: Vec<(Move, PieceType)>,
+    pub white_en_passant: bool,
+    pub black_en_passant: bool,
 }
 
 impl Game {
@@ -34,6 +36,8 @@ impl Game {
             black_moves: Vec::new(),
             white_pawn_promotion: None,
             black_pawn_promotion: None,
+            white_en_passant: false,
+            black_en_passant: false,
         }
     }
 }
@@ -129,5 +133,46 @@ mod tests {
 
         assert_eq!(game.board.pieces[7][6].piece_type, PieceType::KING);
         assert_eq!(game.board.pieces[7][5].piece_type, PieceType::ROOK);
+    }
+
+    #[test]
+    fn test_white_pawn_en_passant() {
+        let mut game = Game::new(Some(String::from(
+            "rnbqkbnr/pppppppp/8/4P3/8/8/PPPP1PPP/RNBQKBNR",
+        )));
+        game.turn = Color::BLACK;
+
+        let en_passant_move = Move(3, 3);
+        let result = board::pieces::move_piece(en_passant_move, 3, 1, &mut game);
+
+        println!("{:?}", game.black_moves);
+        assert!(result.is_ok());
+        assert_eq!(game.board.pieces[3][3].piece_type, PieceType::PAWN);
+        assert_eq!(game.board.pieces[3][3].color, Color::BLACK);
+        assert_eq!(game.white_en_passant, true);
+    }
+
+    #[test]
+    fn test_white_make_en_passant() {
+        let mut game = Game::new(Some(String::from(
+            "rnbqkbnr/pppppppp/8/4P3/8/8/PPPP1PPP/RNBQKBNR",
+        )));
+        game.turn = Color::BLACK;
+
+        let en_passant_move = Move(3, 3);
+        let black_move_result = board::pieces::move_piece(en_passant_move, 3, 1, &mut game);
+
+        assert!(black_move_result.is_ok());
+        assert_eq!(game.white_en_passant, true);
+
+        board::pieces::en_passant_move(&mut game, Color::WHITE, 4, 3);
+
+        assert_eq!(game.board.pieces[3][3].piece_type, PieceType::EMPTY);
+        assert_eq!(game.board.pieces[3][3].color, Color::EMPTY);
+        assert_eq!(game.white_en_passant, false);
+        assert_eq!(game.white_captures.len(), 1);
+        assert!(game.white_captures.contains(&PieceType::PAWN));
+        assert_eq!(game.board.pieces[2][3].piece_type, PieceType::PAWN);
+        assert_eq!(game.board.pieces[2][3].color, Color::WHITE);
     }
 }
