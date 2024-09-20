@@ -128,6 +128,28 @@ The function to perform the castling. Pass in the game, color and the direction.
 
 ## Examples
 
-```
+Example semi pseudo-code
 
+```rust
+let game = Game::new(None);
+
+let x // get x position from somewhere
+let y // get y position from somewhere
+
+let legal_moves = get_legal_moves(game.board, x, y, game.turn);
+
+// choose move from legal_moves
+
+let piece_move = legal_moves[0];
+
+let result = move_piece(piece_move, x, y, game)
+
+if game.white_pawn_promotion {
+    let new_piece_type // get new piece typ from somewhere
+    promote_pawn(game, new_piece_type, Color::WHITE)
+}
+if game.black_pawn_promotion {
+    let new_piece_type // get new piece typ from somewhere
+    promote_pawn(game, new_piece_type, Color::BLACK)
+}
 ```
