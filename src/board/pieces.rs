@@ -1,9 +1,10 @@
 use std::fmt::Error;
 
 use crate::game::Game;
+use crate::utils::matrix::index_to_col_row;
 use crate::utils::sets::cartesian_product;
 
-use super::board::{in_check, positions_in_check, Board};
+use super::board::{in_check, in_check_mate, positions_in_check, Board};
 use std::fmt;
 
 #[derive(Clone, PartialEq, Copy, Debug)]
@@ -89,7 +90,7 @@ pub struct Piece {
     pub has_moved: bool,
 }
 // Illegal moves here means a move, where after the move the team is in check
-fn filter_illegal_moves(
+pub fn filter_illegal_moves(
     board: &Board,
     psuedo_legal_moves: Vec<Move>,
     color: Color,
@@ -476,6 +477,9 @@ pub fn update_game_state(
     game.white_in_check = in_check(board, Color::WHITE);
     game.black_in_check = in_check(board, Color::BLACK);
 
+    game.check_mate_black = in_check_mate(game, Color::BLACK);
+    game.check_mate_white = in_check_mate(game, Color::WHITE);
+
     if moved_color == Color::WHITE {
         game.turn = Color::BLACK;
         game.white_moves.insert(0, (piece_move, moved_piece));
@@ -730,6 +734,35 @@ pub fn rook_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Move>
     return valid_moves;
 }
 
+pub fn possible_moves_for_color(game: &mut Game, color: Color) -> Vec<Move> {
+    let opposing_pieces: Vec<(&Piece, usize)> = game
+        .board
+        .pieces
+        .iter()
+        .flatten()
+        .enumerate()
+        .map(|(i, piece)| (piece, i))
+        .filter(|(piece, _index)| piece.color == color)
+        .collect();
+
+    let possible_moves: Vec<Move> = opposing_pieces
+        .iter()
+        .map(|(_piece, index)| {
+            let (row, col) = index_to_col_row(*index).unwrap();
+
+            let pseudo_moves = get_pseudo_legal_moves(game.board, col, row, color);
+            let legal_moves = filter_illegal_moves(&(game.board), pseudo_moves, color, col, row);
+            if legal_moves.len() > 0 {
+                println!("{:?}", legal_moves);
+                println!("{:?} {:?}", col, row);
+            }
+            return legal_moves;
+        })
+        .flatten()
+        .collect();
+    return possible_moves;
+}
+
 pub fn knight_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Move> {
     let mut valid_moves: Vec<Move> = Vec::new();
 
@@ -774,10 +807,10 @@ pub fn king_legal_moves(x: i32, y: i32, board: Board, color: Color) -> Vec<Move>
     if (y - 1) >= 0 && board.pieces[(y - 1) as usize][x as usize].color != color {
         valid_moves.push(Move(x, y - 1));
     }
-    if (x + 1) <= 7 && board.pieces[(x + 1) as usize][x as usize].color != color {
+    if (x + 1) <= 7 && board.pieces[y as usize][(x + 1) as usize].color != color {
         valid_moves.push(Move(x + 1, y));
     }
-    if (x - 1) >= 0 && board.pieces[(x - 1) as usize][x as usize].color != color {
+    if (x - 1) >= 0 && board.pieces[y as usize][(x - 1) as usize].color != color {
         valid_moves.push(Move(x - 1, y));
     }
 

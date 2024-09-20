@@ -19,6 +19,8 @@ pub struct Game {
     pub black_moves: Vec<(Move, PieceType)>,
     pub white_en_passant: bool,
     pub black_en_passant: bool,
+    pub check_mate_white: bool,
+    pub check_mate_black: bool,
 }
 
 impl Game {
@@ -38,6 +40,8 @@ impl Game {
             black_pawn_promotion: None,
             white_en_passant: false,
             black_en_passant: false,
+            check_mate_white: false,
+            check_mate_black: false,
         }
     }
 }
@@ -174,5 +178,21 @@ mod tests {
         assert!(game.white_captures.contains(&PieceType::PAWN));
         assert_eq!(game.board.pieces[2][3].piece_type, PieceType::PAWN);
         assert_eq!(game.board.pieces[2][3].color, Color::WHITE);
+    }
+
+    #[test]
+    fn test_check_mate() {
+        let mut game = Game::new(Some(String::from(
+            "rnbqkbnr/pppp1ppp/4p3/8/6P1/5P2/PPPPP2P/RNBQKBNR",
+        )));
+        game.turn = Color::BLACK;
+
+        // move black queen to mate position
+        let queen_move = Move(7, 4);
+        let result = board::pieces::move_piece(queen_move, 3, 0, &mut game);
+
+        let possible_moves = board::pieces::possible_moves_for_color(&mut game, Color::WHITE);
+        assert!(result.is_ok());
+        assert_eq!(game.check_mate_white, true);
     }
 }

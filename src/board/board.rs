@@ -1,10 +1,13 @@
 use std::any::Any;
 
-use crate::utils::matrix::index_to_col_row;
+use crate::{game::Game, utils::matrix::index_to_col_row};
 
 use super::{
     parser::parse_fen_string,
-    pieces::{get_legal_moves, get_pseudo_legal_moves, Color, Move, Piece, PieceType},
+    pieces::{
+        get_legal_moves, get_pseudo_legal_moves, possible_moves_for_color, Color, Move, Piece,
+        PieceType,
+    },
 };
 
 #[derive(Clone, Copy)]
@@ -129,6 +132,18 @@ fn fill_pawns(color: Color) -> [Piece; 8] {
     }; 8];
 
     return pawns;
+}
+
+pub fn in_check_mate(game: &mut Game, color: Color) -> bool {
+    if color == Color::WHITE && game.white_in_check {
+        // check all possible moves for white and if empty then check mate
+        let possible_moves = possible_moves_for_color(game, color);
+        return possible_moves.is_empty();
+    } else if color == Color::BLACK && game.black_in_check {
+        let possible_moves = possible_moves_for_color(game, color);
+        return possible_moves.is_empty();
+    }
+    return false;
 }
 
 // Define check as if the king stands on a position that can be reached through a legal move then we are in check
