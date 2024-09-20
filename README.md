@@ -124,7 +124,7 @@ The function used to perform an en en passant move. Can only be performed if `ga
 
 `make_castle_move(game: &mut Game, color: Color, dir: i32) -> Result<(), &'static str>`
 
-The function to perform the castling. Pass in the game, color and the direction. The direction is either 1 or -1. 1 for castling to the right and -1 for castling to the left.
+The function to perform the castling. Pass in the game, color and the direction. The direction is either 1 or -1. 1 for castling to the right and -1 for castling to the left. The dir must correspond to the values in tuple `game.can_castle_[color]`. If dir is 1 then `game.can_castle_[color].0` must be true and same for if dir is -1
 
 ## Examples
 
