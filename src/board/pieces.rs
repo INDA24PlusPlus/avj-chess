@@ -268,7 +268,7 @@ pub fn get_pseudo_legal_moves(board: Board, x: i32, y: i32, color: Color) -> Vec
 }
 // Given a position, return the next valid positions
 pub fn get_legal_moves(board: Board, x: i32, y: i32, color: Color) -> Vec<Move> {
-    let piece = board.pieces[y as usize][x as usize];
+    let piece: Piece = board.pieces[y as usize][x as usize];
 
     let moves = match piece.piece_type {
         PieceType::BISHOP => bishop_legal_moves(
