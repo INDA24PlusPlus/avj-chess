@@ -213,7 +213,8 @@ mod tests {
 
         assert!(result.is_ok());
         assert_eq!(game.check_mate_white, true);
-        assert_eq!(game.check_mate_black, false)
+        assert_eq!(game.check_mate_black, false);
+        assert_eq!(game.game_over(), Some(Color::BLACK));
     }
 
     #[test]
@@ -228,6 +229,7 @@ mod tests {
         println!("{:?}", result.err());
         assert!(result.is_ok());
         assert_eq!(game.check_mate_white, false);
-        assert_eq!(game.check_mate_black, true)
+        assert_eq!(game.check_mate_black, true);
+        assert_eq!(game.game_over(), Some(Color::WHITE));
     }
 }
