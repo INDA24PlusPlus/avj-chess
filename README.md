@@ -104,7 +104,7 @@ Game methods:
 
 `Game::new(fen: Option<String>) -> Game` - Creates and initializes a new game with standard values. Pass in None to have completely empty board or pass in fen string to initialize board from fen string.
 
-`Game::game_over()` - Returns if a game is over by returning the color of the winner. Doe not take into account stalemates
+`Game::game_over()` - Returns if a game is over by returning the color of the winner, empty color means a draw. Does enot take into account stalemates
 
 ## Functions
 

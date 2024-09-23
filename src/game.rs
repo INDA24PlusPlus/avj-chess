@@ -57,10 +57,10 @@ impl Game {
             return Some(Color::WHITE);
         }
         if self.white_repetitions >= 3 {
-            return Some(Color::BLACK);
+            return Some(Color::EMPTY);
         }
         if self.black_repetitions >= 3 {
-            return Some(Color::WHITE);
+            return Some(Color::EMPTY);
         }
         return None;
     }
