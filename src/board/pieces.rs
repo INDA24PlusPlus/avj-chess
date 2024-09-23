@@ -480,6 +480,17 @@ pub fn update_game_state(
     game.check_mate_black = in_check_mate(game, Color::BLACK);
     game.check_mate_white = in_check_mate(game, Color::WHITE);
 
+    if game.white_in_check {
+        game.white_repetitions += 1;
+    } else {
+        game.white_repetitions = 0;
+    }
+    if game.black_in_check {
+        game.black_repetitions += 1;
+    } else {
+        game.black_repetitions = 0;
+    }
+
     if moved_color == Color::WHITE {
         game.turn = Color::BLACK;
         game.white_moves.insert(0, (piece_move, moved_piece));

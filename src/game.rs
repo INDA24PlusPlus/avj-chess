@@ -21,6 +21,8 @@ pub struct Game {
     pub black_en_passant: bool,
     pub check_mate_white: bool,
     pub check_mate_black: bool,
+    pub white_repetitions: i32,
+    pub black_repetitions: i32,
 }
 
 impl Game {
@@ -42,7 +44,25 @@ impl Game {
             black_en_passant: false,
             check_mate_white: false,
             check_mate_black: false,
+            white_repetitions: 0,
+            black_repetitions: 0,
         }
+    }
+
+    pub fn game_over(&self) -> Option<Color> {
+        if self.check_mate_white {
+            return Some(Color::BLACK);
+        }
+        if self.check_mate_black {
+            return Some(Color::WHITE);
+        }
+        if self.white_repetitions >= 3 {
+            return Some(Color::BLACK);
+        }
+        if self.black_repetitions >= 3 {
+            return Some(Color::WHITE);
+        }
+        return None;
     }
 }
 
