@@ -70,7 +70,7 @@ impl Game {
 mod tests {
     use crate::board::{
         self,
-        pieces::{make_castle_move, promote_pawn},
+        pieces::{get_legal_moves, make_castle_move, promote_pawn},
     };
 
     use super::*;
@@ -169,11 +169,16 @@ mod tests {
         let en_passant_move = Move(3, 3);
         let result = board::pieces::move_piece(en_passant_move, 3, 1, &mut game);
 
+        let white_pawn_legal_moves = get_legal_moves(game.board, 3, 3, Color::WHITE);
+        println!("{:?}", white_pawn_legal_moves);
+
         println!("{:?}", game.black_moves);
         assert!(result.is_ok());
         assert_eq!(game.board.pieces[3][3].piece_type, PieceType::PAWN);
         assert_eq!(game.board.pieces[3][3].color, Color::BLACK);
         assert_eq!(game.white_en_passant, Some((3, 3)));
+        assert_eq!(game.board.pieces[3][3].has_moved, true);
+        assert_eq!(white_pawn_legal_moves.len(), 1);
     }
 
     #[test]

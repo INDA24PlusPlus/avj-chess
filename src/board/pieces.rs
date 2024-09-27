@@ -427,7 +427,7 @@ pub fn move_piece(piece_move: Move, x: i32, y: i32, game: &mut Game) -> Result<(
         return Err("Invalid move variable");
     }
 
-    let piece = game.board.pieces[y as usize][x as usize];
+    let mut piece = game.board.pieces[y as usize][x as usize];
     if piece.color != game.turn {
         return Err("Not your piece");
     }
@@ -439,6 +439,7 @@ pub fn move_piece(piece_move: Move, x: i32, y: i32, game: &mut Game) -> Result<(
     }
     let possible_capture =
         game.board.pieces[piece_move.1 as usize][piece_move.0 as usize].piece_type;
+    piece.has_moved = true;
 
     game.board.pieces[piece_move.1 as usize][piece_move.0 as usize] = piece;
     game.board.pieces[y as usize][x as usize] = Piece {
