@@ -334,12 +334,9 @@ pub fn can_pawn_promote(board: &Board, color: Color) -> Option<(i32, i32)> {
     }
 }
 
-pub fn check_en_passant(game: &Game, color: Color, x: i32, y: i32) -> bool {
+pub fn check_en_passant(game: &Game, color: Color, x: i32, y: i32) -> Option<(i32, i32)> {
     if color == Color::WHITE {
         // check if pawn is beside white pawn
-        // check if
-        println!("{:?}", game.black_moves[0]);
-        println!("{:?}", x);
         if game.black_moves[0].1 == PieceType::PAWN
             && ((x > 0
                 && game.board.pieces[3][x as usize - 1].piece_type == PieceType::PAWN
@@ -349,7 +346,7 @@ pub fn check_en_passant(game: &Game, color: Color, x: i32, y: i32) -> bool {
                     && game.board.pieces[3][x as usize + 1].color == Color::WHITE))
             && game.black_moves[0].0 .1 == 3
         {
-            return true;
+            return Some((x, y));
         }
     } else if color == Color::BLACK {
         if game.white_moves[0].1 == PieceType::PAWN
@@ -361,15 +358,15 @@ pub fn check_en_passant(game: &Game, color: Color, x: i32, y: i32) -> bool {
                     && game.board.pieces[4][x as usize + 1].color == Color::BLACK))
             && game.white_moves[0].0 .1 == 4
         {
-            return true;
+            return Some((x, y));
         }
     }
-    return false;
+    return None;
 }
 
 pub fn en_passant_move(game: &mut Game, color: Color, x: i32, y: i32) {
     if color == Color::WHITE {
-        if game.white_en_passant {
+        if game.white_en_passant.is_some() {
             simulate_piece_move(&mut game.board, Move(x - 1, y - 1), x, y).ok();
             // Remove the captured pawn
             game.board.pieces[(y) as usize][game.black_moves[0].0 .0 as usize] = Piece {
@@ -378,10 +375,10 @@ pub fn en_passant_move(game: &mut Game, color: Color, x: i32, y: i32) {
                 has_moved: false,
             };
             game.white_captures.push(PieceType::PAWN);
-            game.white_en_passant = false;
+            game.white_en_passant = None;
         }
     } else if color == Color::BLACK {
-        if game.black_en_passant {
+        if game.black_en_passant.is_some() {
             simulate_piece_move(&mut game.board, Move(x, y + 1), x, y + 1).ok();
             // Remove the captured pawn
             game.board.pieces[(y + 1) as usize][game.white_moves[0].0 .0 as usize] = Piece {
@@ -390,7 +387,7 @@ pub fn en_passant_move(game: &mut Game, color: Color, x: i32, y: i32) {
                 has_moved: false,
             };
             game.black_captures.push(PieceType::PAWN);
-            game.black_en_passant = false;
+            game.black_en_passant = None;
         }
     }
 }
